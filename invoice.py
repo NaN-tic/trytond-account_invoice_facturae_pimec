@@ -14,14 +14,14 @@ from trytond.modules.account_invoice_facturae import FACTURAE_SCHEMA_VERSION
 PIMEFACTURA_PROD = config_.getboolean('pimefactura', 'production', default=False)
 PIMEFACTURA_USER = config_.get('pimefactura', 'user', default=None)
 PIMEFACTURA_PASSWORD = config_.get('pimefactura', 'password', default=None)
-PIMEFACTURA_BASEURL = ('https://www.pimefactura.com/'
-    if PIMEFACTURA_PROD else 'http://new.pimefactura.com/')
+PIMEFACTURA_BASEURL = ('https://www.pimefactura.com'
+    if PIMEFACTURA_PROD else 'http://new.pimefactura.com')
 
 _logger = getLogger(__name__)
 
-def basic_auth(username, password):
-    token = base64.b64encode(f"{username}:{password}".encode('utf-8')).decode("ascii")
-    return f'Basic {token}'
+# def basic_auth(username, password):
+#     token = base64.b64encode(f"{username}:{password}".encode('utf-8')).decode("ascii")
+#     return f'Basic {token}'
 
 
 class Invoice(metaclass=PoolMeta):
@@ -32,7 +32,7 @@ class Invoice(metaclass=PoolMeta):
             certificate_password=None):
         url = '%s/uploadinvoice' % PIMEFACTURA_BASEURL
 
-        to_write = ([],)
+        to_write = []
         for invoice in invoices:
             if invoice.invoice_facturae:
                 continue
@@ -64,19 +64,26 @@ class Invoice(metaclass=PoolMeta):
 
             headers = {
                 'Content-Type': 'application/xml; charset=utf-8',
-                "Authorization": basic_auth(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD),
+                # "Authorization": basic_auth(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD),
                 }
 
             try:
-                rqst = requests.post(url, data=bytes(xml.encode('utf-8')), headers=headers)
+                rqst = requests.post(
+                    url,
+                    data=bytes(xml.encode('utf-8')),
+                    headers=headers,
+                    auth=(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD))
             except Exception:
                 _logger.info('Error send Pimec factura-e: %s' % invoice.rec_name)
                 continue
 
             try:
-                if not rqst.status_code != 200:
+                if rqst.status_code == 200:
+                    to_write.extend(([invoice], {
+                        'invoice_facturae': invoice_facturae,
+                        }))
+                else:
                     _logger.info('Error send Pimec factura-e status code: %s' % rqst.status_code)
-                # response = rqst.content
             except socket.timeout as err:
                 _logger.info('Error send Pimec factura-e timeout: %s' % invoice.rec_name)
                 _logger.error('%s' % str(err))
@@ -85,10 +92,6 @@ class Invoice(metaclass=PoolMeta):
                 _logger.info('Error send Pimec factura-e: %s' % invoice.rec_name)
                 _logger.error('%s' % str(err))
                 continue
-
-            to_write.extend(([invoice], {
-                'invoice_facturae': invoice_facturae,
-                }))
 
         if to_write:
             cls.write(*to_write)
