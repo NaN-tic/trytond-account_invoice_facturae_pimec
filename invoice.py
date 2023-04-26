@@ -19,9 +19,9 @@ PIMEFACTURA_BASEURL = ('https://www.pimefactura.com'
 
 _logger = getLogger(__name__)
 
-# def basic_auth(username, password):
-#     token = base64.b64encode(f"{username}:{password}".encode('utf-8')).decode("ascii")
-#     return f'Basic {token}'
+def basic_auth(username, password):
+    token = base64.b64encode(f"{username}:{password}".encode('utf-8')).decode("ascii")
+    return f'Basic {token}'
 
 
 class Invoice(metaclass=PoolMeta):
@@ -46,50 +46,45 @@ class Invoice(metaclass=PoolMeta):
             else:
                 invoice_facturae = facturae_content
 
-            xml = '''
+            headers = {
+                'Content-Type': 'application/xml',
+                "Authorization": basic_auth(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD),
+                }
+
+            data = '''
                 <UploadInvoiceRequest>
                     <invoicetype>facturae</invoicetype>
                     <invoicetypeversion>%(version)s</invoicetypeversion>
                     <invoiceb64>%(invoiceb64)s</invoiceb64>
-                    <certificateid></certificateid>
-                    <certificatepassword></certificatepassword>
-                    <outchannelid></outchannelid>
                 </UploadInvoiceRequest>
                 ''' % {
                     'version': FACTURAE_SCHEMA_VERSION,
-                    'invoiceb64': base64.b64encode(invoice_facturae),
-                    # 'certificateid': '',
-                    # 'certificatepassword': '',
-                }
-
-            headers = {
-                'Content-Type': 'application/xml; charset=utf-8',
-                # "Authorization": basic_auth(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD),
+                    'invoiceb64': base64.b64encode(invoice_facturae).decode('utf-8'),
                 }
 
             try:
-                rqst = requests.post(
+                rqst = requests.put(
                     url,
-                    data=bytes(xml.encode('utf-8')),
-                    headers=headers,
-                    auth=(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD))
+                    data=data,
+                    headers=headers
+                    )
             except Exception:
-                _logger.info('Error send Pimec factura-e: %s' % invoice.rec_name)
+                _logger.warning('Error send Pimec factura-e: %s' % invoice.rec_name)
                 continue
 
             try:
-                if rqst.status_code == 200:
+                if rqst.status_code == 200 or rqst.status_code == 201:
                     to_write.extend(([invoice], {
                         'invoice_facturae': invoice_facturae,
                         }))
                 else:
-                    _logger.info('Error send Pimec factura-e status code: %s' % rqst.status_code)
+                    _logger.warning('Error send Pimec factura-e status code: %s %s' % (rqst.status_code, rqst.text))
             except socket.timeout as err:
-                _logger.info('Error send Pimec factura-e timeout: %s' % invoice.rec_name)
+                _logger.warning('Error send Pimec factura-e timeout: %s' % invoice.rec_name)
                 _logger.error('%s' % str(err))
                 continue
             except socket.error as err:
-                _logger.info('Error send Pimec factura-e: %s' % invoice.rec_name)
+                _logger.warning('Error send Pimec factura-e: %s' % invoice.rec_name)
                 _logger.error('%s' % str(err))
                 continue
 
