@@ -7,7 +7,6 @@ import socket
 from logging import getLogger
 
 from trytond.pool import PoolMeta
-from trytond import backend
 from trytond.config import config as config_
 from trytond.modules.account_invoice_facturae import FACTURAE_SCHEMA_VERSION
 
@@ -28,23 +27,15 @@ class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
 
     @classmethod
-    def generate_facturae_pimec(cls, invoices, certificate=None,
-            certificate_password=None):
+    def send_facturae_pimec(cls, invoices):
         url = '%s/uploadinvoice' % PIMEFACTURA_BASEURL
 
         to_write = []
         for invoice in invoices:
-            if invoice.invoice_facturae:
+            if invoice.invoice_facturae_send:
                 continue
 
-            facturae_content = invoice.get_facturae()
-            invoice._validate_facturae(facturae_content)
-
-            if backend.name != 'sqlite':
-                invoice_facturae = invoice._sign_facturae(
-                    facturae_content, 'pimec', certificate, certificate_password)
-            else:
-                invoice_facturae = facturae_content
+            invoice_facturae = invoice.invoice_facturae
 
             headers = {
                 'Content-Type': 'application/xml',
@@ -75,7 +66,7 @@ class Invoice(metaclass=PoolMeta):
             try:
                 if rqst.status_code == 200 or rqst.status_code == 201:
                     to_write.extend(([invoice], {
-                        'invoice_facturae': invoice_facturae,
+                        'invoice_facturae_send': True,
                         }))
                 else:
                     _logger.warning('Error send Pimec factura-e status code: %s %s' % (rqst.status_code, rqst.text))
