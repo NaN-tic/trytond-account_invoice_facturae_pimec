@@ -7,6 +7,8 @@ import socket
 from logging import getLogger
 
 from trytond.pool import PoolMeta
+from trytond.i18n import gettext
+from trytond.exceptions import UserError
 from trytond.config import config as config_
 from trytond.modules.account_invoice_facturae import FACTURAE_SCHEMA_VERSION
 
@@ -26,61 +28,68 @@ def basic_auth(username, password):
 class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
 
-    @classmethod
-    def send_facturae_pimec(cls, invoices):
+    def send_facturae_pimec(self):
         url = '%s/uploadinvoice' % PIMEFACTURA_BASEURL
 
-        to_write = []
-        for invoice in invoices:
-            if invoice.invoice_facturae_send:
-                continue
+        if self.invoice_facturae_sent:
+            return
 
-            invoice_facturae = invoice.invoice_facturae
+        invoice_facturae = self.invoice_facturae
 
-            headers = {
-                'Content-Type': 'application/xml',
-                "Authorization": basic_auth(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD),
-                }
+        headers = {
+            'Content-Type': 'application/xml',
+            "Authorization": basic_auth(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD),
+            }
 
-            data = '''
-                <UploadInvoiceRequest>
-                    <invoicetype>facturae</invoicetype>
-                    <invoicetypeversion>%(version)s</invoicetypeversion>
-                    <invoiceb64>%(invoiceb64)s</invoiceb64>
-                </UploadInvoiceRequest>
-                ''' % {
-                    'version': FACTURAE_SCHEMA_VERSION,
-                    'invoiceb64': base64.b64encode(invoice_facturae).decode('utf-8'),
-                }
+        data = '''
+            <UploadInvoiceRequest>
+                <invoicetype>facturae</invoicetype>
+                <invoicetypeversion>%(version)s</invoicetypeversion>
+                <invoiceb64>%(invoiceb64)s</invoiceb64>
+            </UploadInvoiceRequest>
+            ''' % {
+                'version': FACTURAE_SCHEMA_VERSION,
+                'invoiceb64': base64.b64encode(invoice_facturae).decode('utf-8'),
+            }
 
-            try:
-                rqst = requests.put(
-                    url,
-                    data=data,
-                    headers=headers
-                    )
-            except Exception:
-                _logger.warning('Error send Pimec factura-e: %s' % invoice.rec_name)
-                continue
+        try:
+            rqst = requests.put(
+                url,
+                data=data,
+                headers=headers
+                )
+        except Exception as message:
+            _logger.warning('Error send Pimec factura-e: %s' % self.rec_name)
+            raise UserError(gettext('account_invoice_facturae_pimec.msg_error_send_pimec',
+                invoice=self.rec_name,
+                error=message))
+        except:
+            _logger.warning('Error send Pimec factura-e: %s' % self.rec_name)
+            raise UserError(gettext('account_invoice_facturae_pimec.msg_error_send_pimec',
+                invoice=self.rec_name,
+                error=''))
 
-            try:
-                if rqst.status_code == 200 or rqst.status_code == 201:
-                    to_write.extend(([invoice], {
-                        'invoice_facturae_send': True,
-                        }))
-                else:
-                    _logger.warning('Error send Pimec factura-e status code: %s %s' % (rqst.status_code, rqst.text))
-            except socket.timeout as err:
-                _logger.warning('Error send Pimec factura-e timeout: %s' % invoice.rec_name)
-                _logger.error('%s' % str(err))
-                continue
-            except socket.error as err:
-                _logger.warning('Error send Pimec factura-e: %s' % invoice.rec_name)
-                _logger.error('%s' % str(err))
-                continue
-
-        if to_write:
-            cls.write(*to_write)
+        try:
+            if rqst.status_code == 200 or rqst.status_code == 201:
+                self.invoice_facturae_sent = True
+                self.save()
+            else:
+                _logger.warning('Error send Pimec factura-e status code: %s %s' % (rqst.status_code, rqst.text))
+                raise UserError(gettext('account_invoice_facturae_pimec.msg_error_send_pimec_status',
+                    status_code=rqst.status_code,
+                    text=rqst.text))
+        except socket.timeout as err:
+            _logger.warning('Error send Pimec factura-e timeout: %s' % self.rec_name)
+            _logger.error('%s' % str(err))
+            raise UserError(gettext('account_invoice_facturae_pimec.msg_error_send_pimec_timeout',
+                invoice=self.rec_name,
+                error=str(err)))
+        except socket.error as err:
+            _logger.warning('Error send Pimec factura-e: %s' % self.rec_name)
+            _logger.error('%s' % str(err))
+            raise UserError(gettext('account_invoice_facturae_pimec.msg_error_send_pimec_error',
+                invoice=self.rec_name,
+                error=str(err)))
 
 
 class GenerateFacturaeStart(metaclass=PoolMeta):
