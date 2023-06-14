@@ -15,7 +15,7 @@ this repository contains the full copyright notices and license terms. -->
 %(error)s</field>
       </record>
       <record model="ir.message" id="msg_error_send_pimec_error">
-          <field name="text">Error send Pimec factura-e timeout %(invoice)s:
+          <field name="text">Error send Pimec factura-e error %(invoice)s:
 %(error)s</field>
       </record>
     </data>

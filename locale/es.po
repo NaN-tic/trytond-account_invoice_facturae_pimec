@@ -1,0 +1,33 @@
+#
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "model:ir.message,text:msg_error_send_pimec"
+msgid ""
+"Error send Pimec factura-e %(invoice)s:\n"
+"%(error)s"
+msgstr "Error enviando Pimec factura-e %(invoice)s:%(error)s"
+
+msgctxt "model:ir.message,text:msg_error_send_pimec_error"
+msgid ""
+"Error send Pimec factura-e error %(invoice)s:\n"
+"%(error)s"
+msgstr "Error enviando Pimec factura-e error %(invoice)s:\n"
+"%(error)s"
+
+msgctxt "model:ir.message,text:msg_error_send_pimec_status"
+msgid "Error send Pimec factura-e status code: %(status_code)s %(text)s"
+msgstr ""
+"Error enviando Pimec factura-e con código (status): %(status_code)s %(text)s"
+
+msgctxt "model:ir.message,text:msg_error_send_pimec_timeout"
+msgid "Error send Pimec factura-e timeout %(invoice)s:%(error)s"
+msgstr "Error enviando Pimec factura-e timeout %(invoice)s:%(error)s"
+
+msgctxt "selection:account.configuration.facturae,facturae_service:"
+msgid "Pimec"
+msgstr "Pimec"
+
+msgctxt "selection:account.invoice.generate_facturae.start,service:"
+msgid "Pimec"
+msgstr "Pimec"
