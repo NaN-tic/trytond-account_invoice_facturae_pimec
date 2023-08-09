@@ -41,15 +41,24 @@ class Invoice(metaclass=PoolMeta):
             "Authorization": basic_auth(PIMEFACTURA_USER, PIMEFACTURA_PASSWORD),
             }
 
+        #  The outchannel (pimefactura, AOCeFACT, FACe, FACeB2B, Osakidetza, ...)
+        outchannel = self.invoice_address.facturae_outchannel
+        if not outchannel:
+            outchannel = 'pimefactura'
+        elif outchannel == 'AOC':
+            outchannel = 'AOCeFACT'
+
         data = '''
             <UploadInvoiceRequest>
                 <invoicetype>facturae</invoicetype>
                 <invoicetypeversion>%(version)s</invoicetypeversion>
                 <invoiceb64>%(invoiceb64)s</invoiceb64>
+                <outchannelid>%(outchannel)s</outchannelid>
             </UploadInvoiceRequest>
             ''' % {
                 'version': FACTURAE_SCHEMA_VERSION,
                 'invoiceb64': base64.b64encode(invoice_facturae).decode('utf-8'),
+                'outchannel': outchannel,
             }
 
         try:
