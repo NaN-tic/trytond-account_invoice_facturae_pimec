@@ -62,10 +62,17 @@ class Invoice(metaclass=PoolMeta):
             }
 
         try:
+            #import certifi
+            #cert = certifi.where()
             rqst = requests.put(
                 url,
                 data=data,
                 headers=headers
+                headers=headers,
+                #verify='/tryton/tests/lets-encrypt-x3-cross-signed.pem'
+                #verify=cert
+                #verify='/etc/ssl/certs/ca-certificates.crt'
+                verify=False
                 )
         except Exception as message:
             _logger.warning('Error send Pimec factura-e: %s' % self.rec_name)
