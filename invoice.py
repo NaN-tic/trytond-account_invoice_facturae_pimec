@@ -67,7 +67,6 @@ class Invoice(metaclass=PoolMeta):
             rqst = requests.put(
                 url,
                 data=data,
-                headers=headers
                 headers=headers,
                 #verify='/tryton/tests/lets-encrypt-x3-cross-signed.pem'
                 #verify=cert
