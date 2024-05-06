@@ -6,7 +6,7 @@ import socket
 
 from logging import getLogger
 
-from trytond.pool import PoolMeta
+from trytond.pool import Pool, PoolMeta
 from trytond.i18n import gettext
 from trytond.exceptions import UserError
 from trytond.config import config as config_
@@ -27,6 +27,20 @@ def basic_auth(username, password):
 
 class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
+
+    def generate_facturae(self, certificate=None, service=None):
+        pool = Pool()
+        Date = pool.get('ir.date')
+        Configuration = pool.get('account.configuration')
+
+        config = Configuration(1)
+
+        if self.invoice_date > Date.today() and ((service == 'pimec') or
+            (not service and config.facturae_service == 'pimec')):
+            raise UserError(gettext(
+                'account_invoice_facturae_pimec.msg_error_send_pimec_future',
+                id=self.id))
+        super().generate_facturae(certificate, service)
 
     def send_facturae_pimec(self):
         url = '%s/uploadinvoice' % PIMEFACTURA_BASEURL
