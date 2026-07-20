@@ -9,7 +9,7 @@ from logging import getLogger
 from trytond.pool import Pool, PoolMeta
 from trytond.i18n import gettext
 from trytond.exceptions import UserError
-from trytond.config import config as config_
+import trytond.config as config_
 from trytond.modules.account_invoice_facturae import FACTURAE_SCHEMA_VERSION
 
 PIMEFACTURA_PROD = config_.getboolean('pimefactura', 'production', default=False)
